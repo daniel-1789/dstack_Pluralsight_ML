@@ -11,6 +11,8 @@ There are two separate Python files. They should be put in the same directory. T
 
 The second file is rest_dstack.py that serves as a RESTful API interface. Like the first program, it is a toy with basic functionality. In this case is is listening to 127.0.0.1:5002. There are two get commands, users and usersn, detailed below.
 
+The folder "data_files_ml_engineer" should be within the folder with these Python files. (i.e. as a sub-folder of the cloned Pluralsight-ML.)
+
 ## users
 "users" has a single argument, the user handle, which ranges from 1 to 10000, inclusive. It returns a dictionary of the ten nearest user handles (not including itself) and the distance, which ranges from 0 (identical) to 1 (nothing in common). For example, 127.0.0.1:5002/users/9999 will return the ten nearest handles to user handle 9999 as well as the distances from 9999. I ran this program straight out of IDLE. It needs to be run after "Pluralsight Class Modules" as it does a simple sql select from dstack.db.
 
