@@ -2,8 +2,6 @@
 
 from flask import Flask, request
 from flask_restful import Resource, Api, reqparse
-from json import dumps
-import jsonify
 import sqlite3
 
 conn = sqlite3.connect('dstack.db')
@@ -12,6 +10,9 @@ api = Api(app)
 
 
 class User_Id(Resource):
+    """
+    For a given user handle, return the 10 nearest handles with their distances
+    """
     def get(self, user_id):
         conn = sqlite3.connect('dstack.db')
 
@@ -23,12 +24,17 @@ class User_Id(Resource):
         return (user_dict)
 
 
-# Define parser and request args
+# Define parser and request args - use for User_Idn
 parser = reqparse.RequestParser()
 parser.add_argument('id', type=int)
 parser.add_argument('num', type=int)
         
 class User_Idn(Resource):
+    """
+    For a given user handle and number, return the number nearest handles
+    with their distances
+    """
+
     def get(self):
         # http://127.0.0.1:5002/usersn?id=9999&num=15
         args = parser.parse_args()

@@ -1,15 +1,8 @@
-
-
 import numpy as np
 import pandas as pd
 import array
 import sqlite3
-
-
-
-
-conn = sqlite3.connect('dstack.db')
-
+import sys
 
 
 
@@ -58,8 +51,7 @@ def jaccard_distances_array(in_array, num_users):
 def jaccard_distances_user(in_array, user_handle, num_users):
     """
     For a given user_handle, calculate the distance to all other users. 
-    In the end I did not use this method for my final design but am
-    maintaining it for the time being.
+
     
     Inputs - 
     in_array - a 1D array w/ an entry per user. The entry is a set for Jaccard distance calcualtion.
@@ -78,9 +70,11 @@ def jaccard_distances_user(in_array, user_handle, num_users):
         if src_row and dst_row:
             # if either set is empty no point continuing. Otherwise get cardinalities
             intersection_cardinality = len(set.intersection(*[set(src_row), set(dst_row)]))
-            union_cardinality = len(set.union(*[set(src_row), set(dst_row)]))
-            distance_sets[dst_index] = 1.0 - (
-                float(intersection_cardinality)/float(union_cardinality))
+            if (intersection_cardinality > 0):
+                # if the intersection is 0 the distance will be the default max, 1
+                union_cardinality = len(set.union(*[set(src_row), set(dst_row)]))
+                distance_sets[dst_index] = 1.0 - (
+                    float(intersection_cardinality)/float(union_cardinality))
     return distance_sets
 
 
@@ -173,7 +167,12 @@ class PS_Data:
         """
         Read csv file into a pandas dataframe.
         """
-        self.data = pd.read_csv(self.input_file)
+        try:
+            self.data = pd.read_csv(self.input_file)
+        except FileNotFoundError:
+            print('load_data - could not find file {0}'.format(self.input_file))
+            sys.exit() # cease execution
+                  
 
     def get_user_handles(self):
         """
@@ -188,16 +187,16 @@ class PS_Data:
         classes.
         """
         self.user_list = user_list
-        self.num_users = len(user_list)
+        try:
+            self.num_users = len(user_list)
+        except TypeError:
+            print('set_users - user_list is empty')
+            sys.exit()
         
     def calculate_all_jaccard_distances(self):
-        if self.user_data_sets is None:
-            print('calculate_all_jaccard_distances: need to user_data_sets first')
         self.jaccard_distances = jaccard_distances_array(self.user_data_sets, self.num_users)
         
     def calculate_handle_jaccard_distances(self, handle):
-        if self.user_data_sets is None:
-            print('calculate_all_jaccard_distances: need to user_data_sets first')
         return jaccard_distances_user(self.user_data_sets, handle, self.num_users)
 
         
@@ -221,12 +220,15 @@ class Assessments(PS_Data):
         Convert the dataframe into a user handle based array of sets indicating
         assessment results.
         """
-        if self.num_users == 0:
-            print('load_user_data_set: Need to load user data to classes first')
-            return
 
-        assessment_set = [set() for x in range(len(self.user_list))]
-
+        try:
+            assessment_set = [set() for x in range(len(self.user_list))]
+        except TypeError:
+            print('load_user_data_set - user_list is empty')
+            sys.exit()
+        
+        # Tack on _Novice, _Proficient, and _Expert to the assessment names -
+        # for an Expert use all three, Proficient uses two.
         for index, row in self.data.iterrows():
             curr_user = assessment_set[row.user_handle-1]
             if (row.user_assessment_score >= 200):
@@ -261,11 +263,12 @@ class Interests(PS_Data):
         interests.
         """
 
-        if self.num_users == 0:
-            print('load_user_data_set: Need to load user data to classes first')
-            return
+        try:
+            interest_set = [set() for x in range(len(self.user_list))]
+        except TypeError:
+            print('load_user_data_set - user_list is empty')
+            sys.exit()
 
-        interest_set = [set() for x in range(len(self.user_list))]
 
         for index, row in self.data.iterrows():
             curr_user = interest_set[row.user_handle-1]
@@ -290,9 +293,19 @@ class Classes(PS_Data):
         Loading dataframe for Classes is slightly more complex as it also makes use of the 
         tags file.
         """
-        self.data_course_tags = pd.read_csv(self.tags_file)
-        self.data  = pd.read_csv(self.input_file)
+        try: 
+            self.data_course_tags = pd.read_csv(self.tags_file)
+        except FileNotFoundError:
+            print('load_data - could not find tags file {0}'.format(self.tags_file))
+            sys.exit() # cease execution
 
+        try:    
+            self.data  = pd.read_csv(self.input_file)
+        except FileNotFoundError:
+            print('load_data - could not find file {0}'.format(self.input_file))
+            sys.exit() # cease execution
+
+        # get the course_tag for each course
         self.data = self.data.merge(self.data_course_tags[['course_id', 'course_tags']], on=['course_id'])
         self.data.drop('view_date', axis=1, inplace=True)
         self.data.drop('author_handle', axis=1, inplace=True)
@@ -307,7 +320,13 @@ class Classes(PS_Data):
         class interests.
         """
 
-        course_set = [set() for x in range(len(self.user_list))]
+        try:
+            course_set = [set() for x in range(len(self.user_list))]
+        except TypeError:
+            print('load_user_data_set - user_list is empty')
+
+        # Tack on _Beginner, _Intermediate, and _Advanced to the class names -
+        # for an Expert use all three, Proficient uses two.
 
         for index, row in self.data.iterrows():
             curr_user = course_set[row.user_handle-1]
@@ -341,7 +360,7 @@ def create_sql_table():
 
     c.execute('''CREATE TABLE distance_matrix
              (src_usr integer, dst_usr integer, distance real)''')
-    # Save (commit) the changes
+    # Save the changes
     conn.commit()
 
     conn.close()
@@ -358,20 +377,26 @@ def main():
     Classes_Obj = Classes('data_files_ml_engineer/user_course_views.csv', 'data_files_ml_engineer/course_tags.csv')
 
 
-
+    # make a list of the three objects
     Obj_List = [Assessments_Obj,Interests_Obj, Classes_Obj]
 
+
+    # get all our users - as it turns out there are 10,000 ranging from 1 to 10,000.
+    # This code will take advantage of that - in a more generic problem we would need
+    # to accept the possibility of gaps.
     user_lists = [obj.get_user_handles() for obj in Obj_List]
-
-
-
     user_list = np.unique([item for sublist in user_lists for item in sublist])
+
+    # tell each object about the users
     [obj.set_users(user_list) for obj in Obj_List]
+
+    # For each object translate the data in its dataframe into an array of sets
     print('Loading user data sets')
     [obj.load_user_data_set() for obj in Obj_List]
 
+    # create a sql table and store Jaccard distances in it.
     create_sql_table()
-    print('Calculating Jaccard distances across all axes and storing in sql - {0} entries'.format(len(user_list)))
+    print('Calculating Jaccard distances across all axes and storing via sql - {0} entries'.format(len(user_list)))
     for i in range(1, len(user_list) + 1):
         if (i%25) == 0:
             print (i)
