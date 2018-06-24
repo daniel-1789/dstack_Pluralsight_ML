@@ -1,4 +1,4 @@
-# Pluralsite ML Coding Challenge
+# Pluralsight ML Coding Challenge
 Daniel Stack, dstack1776@gmail.com 
 
 github handle: dstack1776
