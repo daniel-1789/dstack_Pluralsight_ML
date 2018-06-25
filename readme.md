@@ -79,4 +79,6 @@ There is also the option of dispensing with the three-axis model. I made use of 
 
 One thing I would have liked would have been some information as to what sorts of assessments, class tags, and interests are similar to one another. Domain knowledge could have been used to make such decisions, likely codifying it with a CSV file similar to the classes' tag file.  For example, Pluralsight's webpage breaks the assessments into Development, IT Ops, Data, Security, Creative categories. These may have been data points appropriate for similarity calculations.
 
+Also, the instructions frequently pointed out that the various categories across interests, assessments, and classes might or might not correspond to each other. This is definitely an area for fine-tuning with domain knowledge as it would allow for set compares along a single axis. 
+
 The REST interface is fairly basic and likely could be improved. This was my first exercise at creating a REST interface - since on my interview with Connor I spoke how I have talent at developing new skills, it seemed an absolutely fair challenge for me to illustrate my capacity to do just that.
