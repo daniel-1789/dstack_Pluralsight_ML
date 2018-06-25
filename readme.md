@@ -7,11 +7,11 @@ June 25, 2018
 
 # Instructions
 
-There are two separate Python files. They should be put in the same directory. The first of these is "Pluralsight Class Modules". I have provided it both as a Jupyter Notebook and as a standard Python file. The function main makes a number of calls to parse the csv files, calculate similarity, and create a sqlite database "dstack.db" that stores the results in the table "distance_matrix", with three columns - src_usr, dst_usr, and distance. This takes several minutes to complete - there's some optimizations I'd consider (and will discuss below) were this not a model but rather a much larger dataset.
+There are two separate Python files. They should be put in the same directory. The first of these is "Pluralsight Class Modules". I have provided it both as a Jupyter Notebook and as a standard Python file. The function main makes a number of calls to parse the csv files, calculate similarity, and create a sqlite database "dstack.db" that stores the results in the table "distance\_matrix", with three columns -- src\_usr, dst\_usr, and distance. This takes several minutes to complete - there's some optimizations I'd consider (and will discuss below) were this not a model but rather a much larger dataset.
 
-The second file is rest_dstack.py that serves as a RESTful API interface. Like the first program, it is a toy with basic functionality. In this case is is listening to 127.0.0.1:5002. There are two get commands, users and usersn, detailed below.
+The second file is rest\_dstack.py that serves as a RESTful API interface. Like the first program, it is a toy with basic functionality. In this case is is listening to 127.0.0.1:5002. There are two get commands, users and usersn, detailed below.
 
-The folder "data_files_ml_engineer" should be within the folder with these Python files. (i.e. as a sub-folder of the cloned Pluralsight-ML.)
+The folder "data\_files\_ml\_engineer" should be within the folder with these Python files. (i.e. as a sub-folder of the cloned Pluralsight-ML.)
 
 ## users
 "users" has a single argument, the user handle, which ranges from 1 to 10000, inclusive. It returns a dictionary of the ten nearest user handles (not including itself) and the distance, which ranges from 0 (identical) to 1 (nothing in common). For example, 127.0.0.1:5002/users/9999 will return the ten nearest handles to user handle 9999 as well as the distances from 9999. I ran this program straight out of IDLE. It needs to be run after "Pluralsight Class Modules" as it does a simple sql select from dstack.db.
@@ -35,12 +35,14 @@ Example output for http://127.0.0.1:5002/usersn?id=9999&num=15
 ## Aborted Effort
 When I first looked into this problem, I had initially considered using cosine similarity for the User Assessments. With all of the assessments having numeric values it seemed a reasonable mechanism. However, this entailed creating a column for every assessment type and the code to an **extremely** long time to run, even with this limited dataset. Moreover, it became clear that even were the performance issues to be overcome, it was not a good model. There were users who took no assessments - which made them identical to other users who took no assessments, as I needed to give them some numeric value (0). In the end, this did not appear a good model to use.
 
+I can think of some models where I would be able to make use of cosine similarity with missing values. For example, when rating movies, one could have a simple -1, 0, +1 rating. A 0 in such an example might work reasonably well for neutral or no opinion. Netflix has such a rating system - you can give a movie a thumb's up or a thumb's down. This does not work well with assessments - a 0 score is very different from not taking the assessment.
+
 ## Three-Axis Jaccard Distance
 Instead, I made use of three axes of Jaccard distance. I set up three axes of distance -- for assessments, classes examined, and self-described interests.
 
 Jaccard similarity is used to compare sets. It is the cardinality of the intersection of two sets divided by the union of the two sets. I added some code to make the similarity between empty sets as 0 (so as to avoid divide by zero error). Given the most similar (identical) sets would have a 1 under this model, I subtracted the result from 1 to get a distance.
 
-I settled on making use of a set compare given the wide variety of interests, courses, and assessments. This avoided hoops I ran into when attempting to make use of cosine similarity.
+I settled on making use of a set compare given the wide variety of interests, courses, and assessments. This avoided the many hoops I ran into when attempting to make use of cosine similarity.
 
 ### Assessments
 One thing I did not want to lose on assessments were the scores. I wanted similarity between people who took assessments in a given area to have some similarity but I wanted even greater similarity if their levels of experience were similar. 
@@ -63,13 +65,17 @@ I was able to take advantage of storing a lot of data in memory. Indeed, some of
 
 That said, the performance of the initial loading of sql table was mediocre. It takes several minutes to complete. If this is an operation which will run daily, that is possibly a reasonable time, even were we to be dealing with larger databases. I did do the SQL writes one at a time. I experimented with only committing when the operations were complete but that did not make a noticeable improvement. I would consider using transactions to speed up these operations - http://bytes.schibsted.com/speeding-up-sqlite-insert-operations/.
 
-To speed up calculations it is possible to take advantage of the distance between a source and destination is commutative - you only need to calculate it once, though this would add to the complexity of potential sql queries to retrieve the data. 
+To speed up calculations it is possible to take advantage of the distance between a source and destination is commutative - you only need to calculate it once, though this would add to the complexity of potential sql queries to retrieve the data - or to do a pair of sql writes, flipping the source and destination. 
 
 I did add a minor optimization, such that if the cardinality of the intersection of two sets is zero then there is no need to determine the cardinality of their union, the denominator. 
 
 Though parallel processing is not the answer for all performance problems, this would appear to be an excellent opportunity to take advantage of any such capacity. The number of users can be divided equally between the  processors with no to minimal coordination required between them during processing.
 
-scikit-learn has a number of similarity algorithms - including one for Jaccard similarity. I decided to write my own basic version. This is definitely an area where experimentation, both in home-brew and in open source/BSD/etc. solutions, would be profitable.
+scikit-learn has a number of similarity algorithms -- including one for Jaccard similarity. I decided to write my own basic version. This is definitely an area where experimentation, both in home-brew and in open source/BSD/etc. solutions, would be profitable.
+
+Additionally, there are a number of repeated loops - as part of calculations for the overall distance, there are loops through Assessments, Interests, and Classes - and then a Pythagorean calculation and finally a loop to do the SQL writes. This makes for easily read code and logical separation of attributes. However, this is  an area where optimization should be considered when operating at a larger scale. 
+
+There is also the option of dispensing with the three-axis model. I made use of as a way to group similar characteristics together, giving equal weight to similarity in all three categories. It would be another valid option to have put everything in one big set.
 
 # Other Thoughts
 
