@@ -68,19 +68,21 @@ def jaccard_distances_user(in_array, user_handle, num_users):
     
     distance_sets = np.full((num_users),1.0) # Initialize all distances to 1 (max)
     src_index = user_handle - 1 # Array is 0-based, user handle is 1-based
+    src_row = in_array[src_index]
     
-    for dst_index, dst_row in enumerate(in_array):
-        src_row = in_array[src_index]
-        dst_row = in_array[dst_index]
-        if src_row and dst_row:
-            # If either set is empty no point continuing. Otherwise get cardinalities
-            intersection_cardinality = len(set.intersection(*[set(src_row), set(dst_row)]))
-            if (intersection_cardinality > 0):
-                # If the intersection is 0 the distance will be the default max, 1
-                union_cardinality = len(set.union(*[set(src_row), set(dst_row)]))
-                distance_sets[dst_index] = 1.0 - (
-                    float(intersection_cardinality)/float(union_cardinality))
+    union_cnt = list(map(lambda x: len(set.union(x, src_row)), in_array))
+    intersect_cnt = list(map(lambda x: len(set.intersection(x, src_row)), in_array))
+    
+    union_cnt = np.array(union_cnt)
+    intersect_cnt = np.array(intersect_cnt)
+
+    with np.errstate(divide='ignore', invalid='ignore'):
+        # Potential divide by zero if the union is an empty set
+        # The similarity is the cardinality of the intersection divided by that of the union.
+        # That result is then subtracted from 1 to determine the distance.
+        distance_sets = 1.0 - np.nan_to_num(intersect_cnt/union_cnt)
     return distance_sets
+
 
 
 def sql_3_axis_distances_for_one_handle(Assmnts_Obj, Ints_Obj, Cls_Obj, user_handle):

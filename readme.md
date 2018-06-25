@@ -67,13 +67,11 @@ That said, the performance of the initial loading of sql table was mediocre. It 
 
 To speed up calculations it is possible to take advantage of the distance between a source and destination is commutative - you only need to calculate it once, though this would add to the complexity of potential sql queries to retrieve the data - or to do a pair of sql writes, flipping the source and destination. 
 
-I did add a minor optimization, such that if the cardinality of the intersection of two sets is zero then there is no need to determine the cardinality of their union, the denominator. 
-
 Though parallel processing is not the answer for all performance problems, this would appear to be an excellent opportunity to take advantage of any such capacity. The number of users can be divided equally between the  processors with no to minimal coordination required between them during processing.
 
 scikit-learn has a number of similarity algorithms -- including one for Jaccard similarity. I decided to write my own basic version. This is definitely an area where experimentation, both in home-brew and in open source/BSD/etc. solutions, would be profitable.
 
-Additionally, there are a number of repeated loops - as part of calculations for the overall distance, there are loops through Assessments, Interests, and Classes - and then a Pythagorean calculation and finally a loop to do the SQL writes. This makes for easily read code and logical separation of attributes. However, this is  an area where optimization should be considered when operating at a larger scale. 
+I did some experimentation between an explicit loop, going through every row and doing unions and intersections between every row one at a time as opposed to performing them all at once via a lambda operation (which of course is doing its own loop). The lambda gave slightly better performance.
 
 There is also the option of dispensing with the three-axis model. I made use of as a way to group similar characteristics together, giving equal weight to similarity in all three categories. It would be another valid option to have put everything in one big set.
 
