@@ -81,4 +81,4 @@ One thing I would have liked would have been some information as to what sorts o
 
 Also, the instructions frequently pointed out that the various categories across interests, assessments, and classes might or might not correspond to each other. This is definitely an area for fine-tuning with domain knowledge as it would allow for set compares along a single axis. 
 
-The REST interface is fairly basic and likely could be improved. This was my first exercise at creating a REST interface - since on my interview with Connor I spoke how I have talent at developing new skills, it seemed an absolutely fair challenge for me to illustrate my capacity to do just that.
+The REST interface is fairly basic and likely could be improved. 
